@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Template บิล - แซ่บกลางซอย</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  :root {
+    --paper: 80mm;
+    --ink: #000;
+    --muted: #555;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: "Sarabun", "Tahoma", sans-serif;
+    background: #e8e8e8;
+    padding: 24px 12px;
+    color: #222;
+  }
+
+  /* ---------- แผงตั้งค่า (ไม่พิมพ์ออกมา) ---------- */
+  .panel {
+    max-width: 420px;
+    margin: 0 auto 24px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .panel h1 { font-size: 17px; margin-bottom: 4px; }
+  .panel p.hint { font-size: 12px; color: #888; margin-bottom: 14px; }
+  .field { margin-bottom: 11px; }
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 4px;
+  }
+  .field input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .row { display: flex; gap: 9px; }
+  .row .field { flex: 1; }
+  .btn-row { display: flex; gap: 9px; margin-top: 6px; }
+  .btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .btn-print { background: #1D9E75; color: #fff; }
+  .btn-ghost { background: #f0f0f0; color: #444; }
+
+  /* ---------- กระดาษบิล ---------- */
+  .receipts {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  .receipt {
+    width: var(--paper);
+    background: #fff;
+    padding: 6mm 5mm;
+    color: var(--ink);
+    box-shadow: 0 1px 6px rgba(0,0,0,0.18);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .r-center { text-align: center; }
+  .r-logo {
+    width: 22mm;
+    height: 22mm;
+    object-fit: contain;
+    margin: 0 auto 3mm;
+    display: block;
+  }
+  .r-logo-fallback {
+    width: 22mm;
+    height: 22mm;
+    margin: 0 auto 3mm;
+    border: 1.5px dashed #bbb;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #aaa;
+  }
+  .r-shop { font-size: 16px; font-weight: 700; }
+  .r-sub { font-size: 11px; color: var(--muted); }
+
+  .r-divider {
+    border: none;
+    border-top: 1px dashed #999;
+    margin: 3mm 0;
+  }
+
+  .r-table-box {
+    text-align: center;
+    padding: 3mm 0;
+  }
+  .r-table-label { font-size: 11px; color: var(--muted); }
+  .r-table-num { font-size: 34px; font-weight: 700; line-height: 1.1; }
+
+  .r-qr {
+    width: 38mm;
+    height: 38mm;
+    margin: 2mm auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .r-qr canvas, .r-qr img { width: 100% !important; height: 100% !important; }
+  .r-qr-hint { font-size: 11px; color: var(--muted); }
+
+  .r-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .r-items { width: 100%; border-collapse: collapse; }
+  .r-items th {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    text-align: left;
+    padding-bottom: 2mm;
+    border-bottom: 1px solid #ddd;
+  }
+  .r-items th.num, .r-items td.num { text-align: right; }
+  .r-items th.qty, .r-items td.qty { text-align: center; width: 9mm; }
+  .r-items td {
+    padding: 1.6mm 0;
+    vertical-align: top;
+    font-size: 12px;
+  }
+  .r-items td.opt {
+    font-size: 10px;
+    color: var(--muted);
+    padding-top: 0;
+  }
+
+  .r-sum { width: 100%; font-size: 12px; }
+  .r-sum td { padding: 0.8mm 0; }
+  .r-sum td.num { text-align: right; }
+  .r-sum tr.grand td {
+    font-size: 15px;
+    font-weight: 700;
+    padding-top: 2mm;
+  }
+
+  .r-foot {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 3mm;
+  }
+  .r-thanks { font-size: 12px; font-weight: 600; color: #222; }
+
+  /* ---------- โหมดพิมพ์ ---------- */
+  @media print {
+    body { background: #fff; padding: 0; }
+    .panel, .no-print { display: none !important; }
+    .receipts { gap: 0; }
+    .receipt {
+      box-shadow: none;
+      padding: 4mm 3mm;
+      page-break-after: always;
+    }
+    @page { size: 80mm auto; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="panel no-print">
+  <h1>Template บิล</h1>
+  <p class="hint">กรอกข้อมูล แล้วกดพิมพ์ — บิลกว้าง 80mm พิมพ์กับเครื่องใบเสร็จได้</p>
+
+  <div class="field">
+    <label>ชื่อร้าน</label>
+    <input id="in-shop" value="แซ่บกลางซอย" />
+  </div>
+  <div class="field">
+    <label>คำโปรย / ประเภทร้าน</label>
+    <input id="in-sub" value="อาหารไทยรสจัดจ้าน" />
+  </div>
+  <div class="row">
+    <div class="field">
+      <label>เลขโต๊ะ</label>
+      <input id="in-table" value="A12" />
+    </div>
+    <div class="field">
+      <label>เลขที่ออเดอร์</label>
+      <input id="in-order" value="#000147" />
+    </div>
+  </div>
+  <div class="field">
+    <label>URL สำหรับ QR (ลิงก์เมนูสั่งอาหาร)</label>
+    <input id="in-qr" value="https://order.saab.shop/t/A12" />
+  </div>
+  <div class="field">
+    <label>URL โลโก้ร้าน (เว้นว่างได้)</label>
+    <input id="in-logo" placeholder="https://..." />
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-ghost" onclick="render()">อัปเดตตัวอย่าง</button>
+    <button class="btn btn-print" onclick="window.print()">พิมพ์บิล</button>
+  </div>
+</div>
+
+<div class="receipts">
+
+  <!-- ========== บิลที่ 1: เปิดโต๊ะ ========== -->
+  <div class="receipt" id="receipt-open">
+    <div class="r-center">
+      <div id="logo-open"></div>
+      <div class="r-shop" id="shop-open">แซ่บกลางซอย</div>
+      <div class="r-sub" id="sub-open">อาหารไทยรสจัดจ้าน</div>
+    </div>
+
+    <hr class="r-divider" />
+
+    <div class="r-table-box">
+      <div class="r-table-label">โต๊ะหมายเลข</div>
+      <div class="r-table-num" id="table-open">A12</div>
+    </div>
+
+    <div class="r-qr" id="qr-open"></div>
+    <div class="r-center r-qr-hint">สแกนเพื่อดูเมนูและสั่งอาหาร</div>
+
+    <hr class="r-divider" />
+
+    <div class="r-meta">
+      <span id="time-open">26/05/2026 18:30</span>
+      <span id="order-open">#000147</span>
+    </div>
+
+    <div class="r-foot">
+      เปิดโต๊ะแล้ว · สั่งอาหารได้จากมือถือ<br />
+      มีปัญหาเรียกพนักงานได้เลย
+    </div>
+  </div>
+
+  <!-- ========== บิลที่ 2: ปิดออเดอร์ / ใบเสร็จ ========== -->
+  <div class="receipt" id="receipt-close">
+    <div class="r-center">
+      <div id="logo-close"></div>
+      <div class="r-shop" id="shop-close">แซ่บกลางซอย</div>
+      <div class="r-sub" id="sub-close">อาหารไทยรสจัดจ้าน</div>
+    </div>
+
+    <hr class="r-divider" />
+
+    <div class="r-meta">
+      <span>โต๊ะ <strong id="table-close">A12</strong></span>
+      <span id="order-close">#000147</span>
+    </div>
+    <div class="r-meta">
+      <span id="time-close">26/05/2026 20:15</span>
+      <span>พนักงาน: หนึ่ง</span>
+    </div>
+
+    <hr class="r-divider" />
+
+    <table class="r-items">
+      <thead>
+        <tr>
+          <th class="qty">จ.น.</th>
+          <th>รายการ</th>
+          <th class="num">ราคา</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="qty">1</td>
+          <td>ต้มยำกุ้งน้ำข้น</td>
+          <td class="num">189</td>
+        </tr>
+        <tr><td></td><td class="opt" colspan="2">เผ็ดกลาง · ไม่ใส่ผักชี</td></tr>
+        <tr>
+          <td class="qty">2</td>
+          <td>หมูกระทะรวมมิตร</td>
+          <td class="num">448</td>
+        </tr>
+        <tr><td></td><td class="opt" colspan="2">เพิ่มไข่ 2 ฟอง</td></tr>
+        <tr>
+          <td class="qty">3</td>
+          <td>ข้าวสวย</td>
+          <td class="num">45</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr class="r-divider" />
+
+    <table class="r-sum">
+      <tr>
+        <td>ยอดอาหาร</td>
+        <td class="num">682</td>
+      </tr>
+      <tr>
+        <td>ค่าบริการ 10%</td>
+        <td class="num">68</td>
+      </tr>
+      <tr class="grand">
+        <td>รวมทั้งสิ้น</td>
+        <td class="num">฿750</td>
+      </tr>
+    </table>
+
+    <hr class="r-divider" />
+
+    <div class="r-foot">
+      <div class="r-thanks">ขอบคุณที่ใช้บริการ</div>
+      ราคารวมภาษีมูลค่าเพิ่มแล้ว<br />
+      <span id="qrpay-hint">ชำระผ่านพร้อมเพย์หรือเงินสดที่เคาน์เตอร์</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function makeQR(elId, text) {
+    var box = document.getElementById(elId);
+    box.innerHTML = "";
+    new QRCode(box, {
+      text: text,
+      width: 256,
+      height: 256,
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  }
+
+  function setLogo(elId, url) {
+    var box = document.getElementById(elId);
+    if (url && url.trim()) {
+      box.innerHTML = '<img class="r-logo" src="' + url +
+        '" alt="logo" onerror="this.parentNode.innerHTML=\'<div class=&quot;r-logo-fallback&quot;>โลโก้ร้าน</div>\'" />';
+    } else {
+      box.innerHTML = '<div class="r-logo-fallback">โลโก้ร้าน</div>';
+    }
+  }
+
+  function render() {
+    var shop = document.getElementById("in-shop").value;
+    var sub = document.getElementById("in-sub").value;
+    var table = document.getElementById("in-table").value;
+    var order = document.getElementById("in-order").value;
+    var qrUrl = document.getElementById("in-qr").value;
+    var logoUrl = document.getElementById("in-logo").value;
+
+    document.getElementById("shop-open").textContent = shop;
+    document.getElementById("shop-close").textContent = shop;
+    document.getElementById("sub-open").textContent = sub;
+    document.getElementById("sub-close").textContent = sub;
+    document.getElementById("table-open").textContent = table;
+    document.getElementById("table-close").textContent = table;
+    document.getElementById("order-open").textContent = order;
+    document.getElementById("order-close").textContent = order;
+
+    setLogo("logo-open", logoUrl);
+    setLogo("logo-close", logoUrl);
+    makeQR("qr-open", qrUrl);
+  }
+
+  render();
+</script>
+
+</body>
+</html>
